@@ -925,6 +925,7 @@
   <x:String x:Key="Text.Stashes.Changes" xml:space="preserve">檢視變更</x:String>
   <x:String x:Key="Text.Stashes.Stashes" xml:space="preserve">擱置變更列表</x:String>
   <x:String x:Key="Text.Statistics" xml:space="preserve">提交統計</x:String>
+  <x:String x:Key="Text.Statistics.AllAuthors" xml:space="preserve">所有貢獻者</x:String>
   <x:String x:Key="Text.Statistics.Overview" xml:space="preserve">總覽</x:String>
   <x:String x:Key="Text.Statistics.ThisMonth" xml:space="preserve">本月</x:String>
   <x:String x:Key="Text.Statistics.ThisWeek" xml:space="preserve">本週</x:String>
