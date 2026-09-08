@@ -1,4 +1,6 @@
+using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 
 namespace SourceGit.Views
 {
@@ -14,6 +16,19 @@ namespace SourceGit.Views
         {
             if (DataContext is ViewModels.Statistics vm && sender is ListBox listBox)
                 vm.ChangeAuthor(listBox.SelectedItem as Models.StatisticsAuthor);
+        }
+
+        private void OnShowAllAuthors(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Parent is Grid grid)
+            {
+                var listBox = grid.Children.OfType<ListBox>().FirstOrDefault();
+                if (listBox != null)
+                    listBox.SelectedItem = null;
+            }
+
+            if (DataContext is ViewModels.Statistics vm)
+                vm.ChangeAuthor(null);
         }
     }
 }
