@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -530,6 +533,33 @@ namespace SourceGit.Views
             TextArea.TextView.LineTransformers.Add(_lineStyleTransformer);
         }
 
+        protected void AlignHorizontalScrollBarToTextView(ScrollViewer scrollViewer)
+        {
+            if (scrollViewer == null)
+                return;
+
+            var hBar = scrollViewer
+                .GetVisualDescendants()
+                .OfType<ScrollBar>()
+                .FirstOrDefault(x => x.Orientation == Orientation.Horizontal);
+
+            if (hBar == null)
+                return;
+
+            void UpdateMargin()
+            {
+                var p = TextArea.TextView.TranslatePoint(new Point(0, 0), scrollViewer);
+                hBar.Margin = new Thickness(p?.X ?? 0, 0, 0, 0);
+            }
+
+            foreach (var m in TextArea.LeftMargins)
+                m.GetObservable(Visual.BoundsProperty).Subscribe(_ => UpdateMargin());
+            TextArea.LeftMargins.CollectionChanged += (_, _) => UpdateMargin();
+            TextArea.TextView.GetObservable(Visual.BoundsProperty).Subscribe(_ => UpdateMargin());
+
+            UpdateMargin();
+        }
+
         public void GotoChange(ViewModels.BlockNavigationDirection direction)
         {
             if (DataContext is not ViewModels.TextDiffContext)
@@ -994,6 +1024,7 @@ namespace SourceGit.Views
             {
                 _scrollViewer.Bind(ScrollViewer.OffsetProperty, new Binding("ScrollOffset", BindingMode.TwoWay));
                 _scrollViewer.ScrollChanged += OnTextViewScrollChanged;
+                AlignHorizontalScrollBarToTextView(_scrollViewer);
             }
         }
 
@@ -1181,6 +1212,7 @@ namespace SourceGit.Views
             {
                 _scrollViewer.ScrollChanged += OnTextViewScrollChanged;
                 _scrollViewer.Bind(ScrollViewer.OffsetProperty, new Binding("ScrollOffset", BindingMode.OneWay));
+                AlignHorizontalScrollBarToTextView(_scrollViewer);
             }
         }
 
