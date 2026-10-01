@@ -106,5 +106,13 @@ namespace SourceGit.Views
                 e.Handled = true;
             }
         }
+
+        private void OnSuggestionTapped(object sender, TappedEventArgs e)
+        {
+            if (sender is Control { DataContext: LauncherPagesCommandPaletteSuggestion suggestion })
+                suggestion.Use();
+
+            e.Handled = true;
+        }
     }
 }

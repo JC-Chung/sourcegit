@@ -80,11 +80,34 @@ namespace SourceGit.ViewModels
 
         private void UpdateVisible()
         {
+            _statusFilter = StatusFilter.None;
+            var filter = _searchFilter;
+            if (filter != null && filter.StartsWith("is:", StringComparison.OrdinalIgnoreCase))
+            {
+                var idx = filter.IndexOf(' ');
+                var token = idx < 0 ? filter.Substring(3) : filter.Substring(3, idx - 3);
+                var mode = token.ToLowerInvariant() switch
+                {
+                    "tracking" => StatusFilter.Tracking,
+                    "ahead" => StatusFilter.Ahead,
+                    "behind" => StatusFilter.Behind,
+                    "dirty" => StatusFilter.Dirty,
+                    _ => StatusFilter.None,
+                };
+                if (mode != StatusFilter.None)
+                {
+                    _statusFilter = mode;
+                    filter = idx < 0 ? string.Empty : filter.Substring(idx + 1);
+                }
+            }
+            _nameFilter = filter;
+
             var pages = new List<LauncherPage>();
             CollectVisiblePages(pages);
 
             var repos = new List<RepositoryNode>();
-            CollectVisibleRepository(repos, Preferences.Instance.RepositoryNodes);
+            if (_statusFilter == StatusFilter.None)
+                CollectVisibleRepository(repos, Preferences.Instance.RepositoryNodes);
 
             var autoSelectPage = _selectedPage;
             var autoSelectRepo = _selectedRepo;
@@ -158,9 +181,20 @@ namespace SourceGit.ViewModels
                 if (page == _launcher.ActivePage)
                     continue;
 
-                if (string.IsNullOrEmpty(_searchFilter) ||
-                    page.Node.Name.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase) ||
-                    (page.Node.IsRepository && page.Node.Id.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase)))
+                if (_statusFilter != StatusFilter.None)
+                {
+                    if (page.Data is not Repository repo || repo.CurrentBranch is not { } branch)
+                        continue;
+
+                    var ahead = branch.Ahead?.Count ?? 0;
+                    var behind = branch.Behind?.Count ?? 0;
+                    if (!MatchStatus(ahead, behind, repo.LocalChangesCount))
+                        continue;
+                }
+
+                if (string.IsNullOrEmpty(_nameFilter) ||
+                    page.Node.Name.Contains(_nameFilter, StringComparison.OrdinalIgnoreCase) ||
+                    (page.Node.IsRepository && page.Node.Id.Contains(_nameFilter, StringComparison.OrdinalIgnoreCase)))
                     pages.Add(page);
             }
         }
@@ -178,17 +212,32 @@ namespace SourceGit.ViewModels
                 if (_opened.Contains(node.Id))
                     continue;
 
-                if (string.IsNullOrEmpty(_searchFilter) ||
-                    node.Id.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase) ||
-                    node.Name.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase))
+                if (string.IsNullOrEmpty(_nameFilter) ||
+                    node.Id.Contains(_nameFilter, StringComparison.OrdinalIgnoreCase) ||
+                    node.Name.Contains(_nameFilter, StringComparison.OrdinalIgnoreCase))
                     outs.Add(node);
             }
+        }
+
+        private bool MatchStatus(int ahead, int behind, int localChanges)
+        {
+            return _statusFilter switch
+            {
+                StatusFilter.Tracking => ahead > 0 || behind > 0,
+                StatusFilter.Ahead => ahead > 0,
+                StatusFilter.Behind => behind > 0,
+                StatusFilter.Dirty => localChanges > 0,
+                _ => true,
+            };
         }
 
         private Launcher _launcher = null;
         private HashSet<string> _opened = new HashSet<string>();
         private List<LauncherPage> _visiblePages = [];
         private List<RepositoryNode> _visibleRepos = [];
+        private enum StatusFilter { None, Tracking, Ahead, Behind, Dirty }
+        private StatusFilter _statusFilter = StatusFilter.None;
+        private string _nameFilter = string.Empty;
         private string _searchFilter = string.Empty;
         private LauncherPage _selectedPage = null;
         private RepositoryNode _selectedRepo = null;

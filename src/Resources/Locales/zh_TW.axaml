@@ -597,6 +597,10 @@
   <x:String x:Key="Text.Launcher.OpenRepository" xml:space="preserve">開啟存放庫</x:String>
   <x:String x:Key="Text.Launcher.Pages" xml:space="preserve">頁面列表</x:String>
   <x:String x:Key="Text.Launcher.Workspaces" xml:space="preserve">工作區列表</x:String>
+  <x:String x:Key="Text.LauncherPagesCommandPalette.Filter.Tracking">已開啟分頁：領先或落後上游</x:String>
+  <x:String x:Key="Text.LauncherPagesCommandPalette.Filter.Ahead">已開啟分頁：領先上游</x:String>
+  <x:String x:Key="Text.LauncherPagesCommandPalette.Filter.Behind">已開啟分頁：落後上游</x:String>
+  <x:String x:Key="Text.LauncherPagesCommandPalette.Filter.Dirty">已開啟分頁：有本機變更</x:String>
   <x:String x:Key="Text.Merge" xml:space="preserve">合併分支</x:String>
   <x:String x:Key="Text.Merge.Edit" xml:space="preserve">編輯合併訊息</x:String>
   <x:String x:Key="Text.Merge.Into" xml:space="preserve">目標分支:</x:String>
@@ -737,6 +741,7 @@
   <x:String x:Key="Text.Preferences.Integration" xml:space="preserve">第三方工具整合</x:String>
   <x:String x:Key="Text.Preferences.Shell" xml:space="preserve">終端機/Shell</x:String>
   <x:String x:Key="Text.Preferences.Shell.Args" xml:space="preserve">啟動參數</x:String>
+  <x:String x:Key="Text.Preferences.Shell.Args.ToolTip" xml:space="preserve">您可以使用「.」表示目前工作目錄，以及「$FOLDER_NAME」表示其資料夾名稱</x:String>
   <x:String x:Key="Text.Preferences.Shell.Path" xml:space="preserve">安裝路徑</x:String>
   <x:String x:Key="Text.Preferences.Shell.Type" xml:space="preserve">終端機/Shell</x:String>
   <x:String x:Key="Text.PruneRemote" xml:space="preserve">清理遠端已刪除分支</x:String>
@@ -1081,6 +1086,8 @@
   <x:String x:Key="Text.WorkingCopy.UseCommitTemplate" xml:space="preserve">範本: ${0}$</x:String>
   <x:String x:Key="Text.Workspace" xml:space="preserve">工作區: </x:String>
   <x:String x:Key="Text.Workspace.Configure" xml:space="preserve">設定工作區...</x:String>
+  <x:String x:Key="Text.Workspace.FetchAllRepositories" xml:space="preserve">提取工作區所有存放庫</x:String>
+  <x:String x:Key="Text.Workspace.FetchAllRepositoriesParallel" xml:space="preserve">提取工作區所有存放庫 (併行)</x:String>
   <x:String x:Key="Text.Worktree" xml:space="preserve">本機工作樹</x:String>
   <x:String x:Key="Text.Worktree.Branch" xml:space="preserve">分支</x:String>
   <x:String x:Key="Text.Worktree.CopyPath" xml:space="preserve">複製工作樹路徑</x:String>
