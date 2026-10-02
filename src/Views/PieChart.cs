@@ -125,10 +125,10 @@ namespace SourceGit.Views
             foreach (var author in _report.Authors)
             {
                 var percent = (double)author.Count / total;
-                var brush = s_brushes[brushIndex];
                 if (percent > 0.01)
                 {
                     var sweepAngle = percent * 2 * Math.PI;
+                    var brush = s_brushes[brushIndex];
                     DrawArc(context, startAngle, sweepAngle, brush);
 
                     var arc = new Arc(startAngle, sweepAngle, author.User.Name, author.Count, percent, brush, author);
@@ -147,9 +147,10 @@ namespace SourceGit.Views
                 {
                     var sweepAngle = remaining;
                     var count = total - renderedCount;
-                    DrawArc(context, startAngle, sweepAngle, brush);
+                    var othersBrush = secondaryForeground;
+                    DrawArc(context, startAngle, sweepAngle, othersBrush);
 
-                    var arc = new Arc(startAngle, sweepAngle, "Others", count, (double)count / total, brush, null);
+                    var arc = new Arc(startAngle, sweepAngle, "Others", count, (double)count / total, othersBrush, null);
                     _arcs.Add(arc);
                     if (arc.IsLeftSide)
                         leftArcs.Add(arc);
