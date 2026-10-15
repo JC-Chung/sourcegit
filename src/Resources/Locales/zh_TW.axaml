@@ -597,6 +597,10 @@
   <x:String x:Key="Text.Launcher.OpenRepository" xml:space="preserve">開啟存放庫</x:String>
   <x:String x:Key="Text.Launcher.Pages" xml:space="preserve">頁面列表</x:String>
   <x:String x:Key="Text.Launcher.Workspaces" xml:space="preserve">工作區列表</x:String>
+  <x:String x:Key="Text.LauncherPagesCommandPalette.Filter.Tracking">已開啟分頁：領先或落後上游</x:String>
+  <x:String x:Key="Text.LauncherPagesCommandPalette.Filter.Ahead">已開啟分頁：領先上游</x:String>
+  <x:String x:Key="Text.LauncherPagesCommandPalette.Filter.Behind">已開啟分頁：落後上游</x:String>
+  <x:String x:Key="Text.LauncherPagesCommandPalette.Filter.Dirty">已開啟分頁：有本機變更</x:String>
   <x:String x:Key="Text.Merge" xml:space="preserve">合併分支</x:String>
   <x:String x:Key="Text.Merge.Edit" xml:space="preserve">編輯合併訊息</x:String>
   <x:String x:Key="Text.Merge.Into" xml:space="preserve">目標分支:</x:String>
