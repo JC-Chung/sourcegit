@@ -352,6 +352,7 @@
   <x:String x:Key="Text.DeinitSubmodule.Path" xml:space="preserve">子模組:</x:String>
   <x:String x:Key="Text.DeleteBranch" xml:space="preserve">刪除分支確認</x:String>
   <x:String x:Key="Text.DeleteBranch.Branch" xml:space="preserve">分支名稱:</x:String>
+  <x:String x:Key="Text.DeleteBranch.DeleteAttachedWorktree" xml:space="preserve">同時刪除使用此分支的工作樹</x:String>
   <x:String x:Key="Text.DeleteBranch.Force" xml:space="preserve">強制刪除，即使包含未合併的提交</x:String>
   <x:String x:Key="Text.DeleteBranch.IsRemoteTip" xml:space="preserve">您正在刪除遠端上的分支，請務必小心!</x:String>
   <x:String x:Key="Text.DeleteBranch.WithTrackingRemote" xml:space="preserve">同時刪除遠端分支 ${0}$</x:String>
@@ -416,6 +417,12 @@
   <x:String x:Key="Text.Discard.IncludeUntracked" xml:space="preserve">包含未追蹤檔案</x:String>
   <x:String x:Key="Text.Discard.Total" xml:space="preserve">將捨棄總計 {0} 項已選取的變更</x:String>
   <x:String x:Key="Text.Discard.Warning" xml:space="preserve">您無法復原此操作，請確認後再繼續!</x:String>
+  <x:String x:Key="Text.EditApiKey" xml:space="preserve">[zh_TW] Edit API Key</x:String>
+  <x:String x:Key="Text.EditApiKey.ApiKey" xml:space="preserve">[zh_TW] API Key</x:String>
+  <x:String x:Key="Text.EditApiKey.EnvironmentVariable" xml:space="preserve">[zh_TW] Environment Variable</x:String>
+  <x:String x:Key="Text.EditApiKey.InvalidStorage" xml:space="preserve">[zh_TW] Currently, saving API key to system credential manager is not supported on Linux</x:String>
+  <x:String x:Key="Text.EditApiKey.Server" xml:space="preserve">[zh_TW] Server</x:String>
+  <x:String x:Key="Text.EditApiKey.Storage" xml:space="preserve">[zh_TW] Storage</x:String>
   <x:String x:Key="Text.EditBranchDescription" xml:space="preserve">編輯分支的描述</x:String>
   <x:String x:Key="Text.EditBranchDescription.Target" xml:space="preserve">目標:</x:String>
   <x:String x:Key="Text.EditRepositoryNode.Bookmark" xml:space="preserve">書籤:</x:String>
