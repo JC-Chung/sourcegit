@@ -1,0 +1,34 @@
+name: Remind PR Base Branch
+
+on:
+  pull_request_target:
+    types: [opened]
+    branches:
+      - master
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on PRs targeting master
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: [
+                `Hi @${pr.user.login}, thanks for your contribution!`,
+                ``,
+                `SourceGit uses \`develop\` as its integration branch, but this PR currently targets \`master\`.`,
+                `Please change the base branch to \`develop\`:`,
+                `click **Edit** next to the PR title, then select \`develop\` in the base branch dropdown.`,
+                ``,
+                `If \`master\` and \`develop\` have diverged, you may also need to rebase your branch onto \`develop\` to remove unrelated commits from this PR.`,
+              ].join('\n')
+            });
