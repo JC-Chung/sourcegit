@@ -1,164 +1,179 @@
-import sys
-import io
-from pathlib import Path
-import xml.etree.ElementTree as ET
-import re
+"""Helper script for adding missing translations to locale files.
 
-# Define namespaces URIs
+Usage: python translate_helper.py <lang_id> [--check]
+Requires Python 3.9+
+"""
+
+import bisect
+import io
+import re
+import sys
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+if sys.version_info < (3, 9):
+    sys.exit("Error: This script requires Python 3.9 or later.")
+
+# XML namespaces used by Avalonia resource dictionaries.
+# XAML_NS is the default namespace; X_NS provides x:Key / x:String.
 XAML_NS = 'https://github.com/avaloniaui'
 X_NS = 'http://schemas.microsoft.com/winfx/2006/xaml'
+STRING_TAG = f"{{{X_NS}}}String"
+KEY_ATTR = f"{{{X_NS}}}Key"
 
-def register_namespaces():
+# Locale file names look like "en_US", "zh_CN", "zh_Hant", etc.
+LOCALE_FILE_RE = re.compile(r'([a-zA-Z]{2,3}(?:_[a-zA-Z]{2,4})*)\.axaml')
+
+
+def register_namespaces() -> None:
     """Registers namespaces for ElementTree to use when writing the XML file."""
     ET.register_namespace('', XAML_NS)
     ET.register_namespace('x', X_NS)
 
-def get_locale_dir():
+
+def get_locale_dir() -> Path:
     """Constructs the absolute path for the locales files."""
     try:
         project_root = Path(__file__).resolve().parent
     except NameError:
-        project_root = Path.cwd().resolve()
+        # __file__ may be undefined in some embedded/REPL environments
+        project_root = Path.cwd()
 
-    return project_root / 'src' / 'Resources' / 'Locales'
-
-def get_locale_files(lang_id):
-    """Constructs the absolute paths for the target and reference locale files."""
-
-    # get the locales dir
-    locales_dir = get_locale_dir()
-
-    # get the target file absolute path
-    target_file = locales_dir / f"{lang_id}.axaml"
-
-    if not target_file.is_file():
-        print(f"Error: Target language file path '{target_file}' does not exist or is not a file.")
+    locales_dir = project_root / 'src' / 'Resources' / 'Locales'
+    if not locales_dir.is_dir():
+        print(f"Error: Locales directory not found at {locales_dir}")
+        print("Please run this script from the project root.")
         sys.exit(1)
 
+    return locales_dir
+
+
+def find_reference_file(target_file: Path, locales_dir: Path) -> Path:
+    """Parses the target file's ResourceInclude to locate the reference locale file."""
     try:
-        tree = ET.parse(target_file)
-        root = tree.getroot()
+        root = ET.parse(target_file).getroot()
         merged_dict = root.find(f"{{{XAML_NS}}}ResourceDictionary.MergedDictionaries")
         if merged_dict is None:
             raise ValueError("Could not find MergedDictionaries tag.")
-        
+
         resource_include = merged_dict.find(f"{{{XAML_NS}}}ResourceInclude")
         if resource_include is None:
             raise ValueError("Could not find ResourceInclude tag.")
 
-        include_source = resource_include.get('Source')
-        ref_filename_match = re.search(r'([a-zA-Z]{2}_[a-zA-Z]{2}).axaml', include_source)
-        if not ref_filename_match:
+        # Source is an avares:// URI; extract the locale file name from it
+        include_source = resource_include.get('Source') or ''
+        match = LOCALE_FILE_RE.search(include_source)
+        if not match:
             raise ValueError("Could not parse reference filename from Source attribute.")
-        
-        ref_filename = f"{ref_filename_match.group(1)}.axaml"
-        ref_file = locales_dir / ref_filename
-    except Exception as e:
+
+        return locales_dir / f"{match.group(1)}.axaml"
+    except (ET.ParseError, ValueError, OSError) as e:
         print(f"Error parsing {target_file} to find reference file: {e}")
         sys.exit(1)
 
+
+def get_locale_files(lang_id: str) -> tuple[Path, Path]:
+    """Constructs the absolute paths for the target and reference locale files."""
+    locales_dir = get_locale_dir()
+
+    target_file = locales_dir / f"{lang_id}.axaml"
+    if not target_file.is_file():
+        print(f"Error: Target language file not found at {target_file}")
+        sys.exit(1)
+
+    ref_file = find_reference_file(target_file, locales_dir)
     if not ref_file.is_file():
-        print(f"Error: Reference language file path '{ref_file}' does not exist or is not a file.")
+        print(f"Error: Reference language file '{ref_file}' not found.")
         sys.exit(1)
 
     return target_file, ref_file
 
-def get_strings(root):
+
+def get_strings(root: ET.Element) -> dict[str, str]:
     """Extracts all translation keys and their text values from an XML root."""
     strings = {}
-    for string_tag in root.findall(f"{{{X_NS}}}String"):
-        key = string_tag.get(f"{{{X_NS}}}Key")
+    for string_tag in root.findall(STRING_TAG):
+        key = string_tag.get(KEY_ATTR)
         if key:
             strings[key] = string_tag.text if string_tag.text is not None else ""
     return strings
 
-def add_new_string_tag(root, key, value):
-    """Adds a new <x:String> tag to the XML root, maintaining some formatting."""
 
-    # create a new tag with Key<>Value
-    new_tag = ET.Element(f"{{{X_NS}}}String")
-    new_tag.set(f"{{{X_NS}}}Key", key)
+def add_new_string_tag(root: ET.Element, key: str, value: str) -> None:
+    """Adds a new <x:String> tag to the XML root, keeping alphabetical order."""
+    new_tag = ET.Element(STRING_TAG)
+    new_tag.set(KEY_ATTR, key)
+    # xml:space="preserve" is required so Avalonia keeps leading/trailing
+    # whitespace in translated strings
     new_tag.set("xml:space", "preserve")
     new_tag.text = value
 
-    # try to find the last tag in the 
-    last_element_index = -1
+    # Insert in alphabetical order among existing x:String elements.
+    # Non-x:String children (comments, other tags) are skipped over.
     children = list(root)
+    string_indices = [i for i, c in enumerate(children) if c.tag == STRING_TAG]
+    keys = [(children[i].get(KEY_ATTR) or '').lower() for i in string_indices]
 
-    start = 0
-    end = len(children) - 1
-    middle = -1
-
-    # find the first String tag
-    while (children[start].tag != f"{{{X_NS}}}String"):
-        start = start + 1
-
-    # find where the insert the new tag
-    # so it always keeps the alphabetical order
-    while (end - start) > 1:
-        middle = int((start + end) / 2)
-
-        if (children[middle].tag == f"{{{X_NS}}}String"):
-            middle_key = children[middle].get(f"{{{X_NS}}}Key")
-
-            if key.lower() < middle_key.lower():
-                end = middle
-            else:
-                start = middle
-
-    # insert after the middle or at the end
-    if middle != -1:
-        new_tag.tail = root[middle].tail
-        root.insert(middle + 1, new_tag)
-    else:
+    if not string_indices:
         new_tag.tail = "\n  "
         root.append(new_tag)
+        return
 
-def save_translations(tree, file_path):
+    pos = bisect.bisect_left(keys, key.lower())
+
+    if pos >= len(string_indices):
+        insert_at = string_indices[-1] + 1
+    else:
+        insert_at = string_indices[pos]
+
+    # Copy the neighbouring element's tail whitespace to keep indentation consistent
+    ref_index = insert_at - 1 if pos >= len(string_indices) else insert_at
+    new_tag.tail = children[ref_index].tail if children[ref_index].tail else "\n  "
+    root.insert(insert_at, new_tag)
+
+
+def save_translations(tree: ET.ElementTree[ET.Element[str]], file_path: Path) -> None:
     """Saves the XML tree to the file, attempting to preserve formatting."""
-    try:
-        ET.indent(tree, space="  ")
-    except AttributeError:
-        print("Warning: ET.indent not available. Output formatting may not be ideal.")
-        
+    ET.indent(tree, space="  ")
     tree.write(file_path, encoding='utf-8', xml_declaration=False)
     print(f"\nSaved changes to {file_path}")
 
-def main():
-    """Main function to run the translation helper script."""
-    if len(sys.argv) < 2:
-        print("Usage: python utils/translate_helper.py <lang_id> [--check]")
-        sys.exit(1)
 
-    # Force sys.stdin to use UTF-8 decoding
-    if sys.stdin.encoding.lower() != 'utf-8':
-        print("Changin input encoding to UTF-8")
+def ensure_utf8_stdin() -> None:
+    """Forces sys.stdin to use UTF-8 decoding."""
+    # sys.stdin.encoding can be None when stdin is piped or redirected
+    encoding = (sys.stdin.encoding or '').lower()
+    if encoding != 'utf-8':
+        print("Changing input encoding to UTF-8")
         sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
 
-    # get arguments
+
+def main() -> None:
+    """Main function to run the translation helper script."""
+    if len(sys.argv) < 2:
+        print("Usage: python translate_helper.py <lang_id> [--check]")
+        sys.exit(1)
+
+    ensure_utf8_stdin()
+
     lang_id = sys.argv[1]
     is_check_mode = len(sys.argv) > 2 and sys.argv[2] == '--check'
 
-    # setup XML parser
     register_namespaces()
 
-    # try to find XML files
     target_file_path, ref_file_path = get_locale_files(lang_id)
 
-    # parse files
+    # Parse files (keep comments in the target file)
     parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
     target_tree = ET.parse(target_file_path, parser)
     target_root = target_tree.getroot()
 
-    ref_tree = ET.parse(ref_file_path)
-    ref_root = ref_tree.getroot()
+    ref_root = ET.parse(ref_file_path).getroot()
 
-    # get all translation keys
     target_strings = get_strings(target_root)
     ref_strings = get_strings(ref_root)
 
-    # compute the missing keys between the target and reference files
-    missing_keys = sorted([key for key in ref_strings.keys() if key not in target_strings])
+    missing_keys = sorted(key for key in ref_strings if key not in target_strings)
 
     if not missing_keys:
         print("All keys are translated. Nothing to do.")
@@ -166,34 +181,26 @@ def main():
 
     print(f"Found {len(missing_keys)} missing keys for language '{lang_id}'.")
 
-    # running in check mode will only display the missing keys
     if is_check_mode:
         print("Missing keys:")
         for key in missing_keys:
             print(f"  - {key}")
         return
 
-    # running in normal mode will trigger the translation process
     print("Starting interactive translation...\n")
     changes_made = False
     try:
-        # for each missing key
         for i, key in enumerate(missing_keys):
-
-            # show the original text
             original_text = ref_strings.get(key, "")
             print("-" * 40)
             print(f"({i+1}/{len(missing_keys)}) Key: '{key}'")
             print(f"Original: '{original_text}'")
 
-            # asks for a translated version
-            user_input = input("Enter translation (or press Enter to skip, 'q' to save and quit): ")
+            user_input = input("Enter translation (Enter to skip, 'q' to save and quit): ")
 
-            # if 'q' quit and save
-            if user_input.lower() == 'q':
+            if user_input.strip().lower() == 'q':
                 print("\nQuitting and saving changes...")
                 break
-            # if valid input, save
             elif user_input:
                 add_new_string_tag(target_root, key, user_input)
                 changes_made = True
@@ -202,11 +209,11 @@ def main():
     except (KeyboardInterrupt, EOFError):
         print("\n\nProcess interrupted. Saving changes...")
     finally:
-        # if there was any changes, save back to the target file
         if changes_made:
             save_translations(target_tree, target_file_path)
         else:
             print("\nNo changes were made.")
+
 
 if __name__ == "__main__":
     main()
