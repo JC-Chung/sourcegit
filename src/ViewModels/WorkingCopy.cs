@@ -852,7 +852,7 @@ namespace SourceGit.ViewModels
             {
                 if (!LoadCommitMessageFromFile(Path.Combine(_repo.GitDir, "rebase-merge", "message")))
                 {
-                    var message = new Commands.QueryCommitFullMessage(_repo.FullPath, rebasing.StoppedAt.SHA).GetResult();
+                    var message = new Commands.QueryCommitFullMessage(_repo.FullPath, rebasing.StoppedAt?.SHA ?? "HEAD").GetResult();
                     SetAutoLoadedCommitMessage(message);
                 }
             }
