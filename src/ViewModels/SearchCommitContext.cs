@@ -88,6 +88,11 @@ namespace SourceGit.ViewModels
             Suggestions = null;
         }
 
+        public void StopSearch()
+        {
+            _histories.IsSearchingCommits = false;
+        }
+
         public void StartSearch()
         {
             Results = null;
