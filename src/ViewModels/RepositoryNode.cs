@@ -61,7 +61,8 @@ namespace SourceGit.ViewModels
         [JsonIgnore]
         public bool IsInvalid
         {
-            get => _isRepository && !Directory.Exists(_id);
+            get => _isRepository && _isInvalid;
+            private set => SetProperty(ref _isInvalid, value);
         }
 
         [JsonIgnore]
@@ -97,7 +98,7 @@ namespace SourceGit.ViewModels
                 foreach (var subNode in SubNodes)
                     subNode.Open();
             }
-            else if (Directory.Exists(_id))
+            else if (!IsInvalid)
             {
                 App.GetLauncher().OpenRepositoryInTab(this, null);
             }
@@ -126,13 +127,13 @@ namespace SourceGit.ViewModels
 
         public void OpenInFileManager()
         {
-            if (_isRepository && Directory.Exists(_id))
+            if (_isRepository && !IsInvalid)
                 Native.OS.OpenInFileManager(_id);
         }
 
         public void OpenTerminal()
         {
-            if (_isRepository && Directory.Exists(_id))
+            if (_isRepository && !IsInvalid)
                 Native.OS.OpenTerminal(_id);
         }
 
@@ -165,13 +166,6 @@ namespace SourceGit.ViewModels
                 return;
             }
 
-            if (!Directory.Exists(_id))
-            {
-                _lastUpdateStatus = DateTime.Now;
-                Status = null;
-                return;
-            }
-
             if (!force)
             {
                 var passed = DateTime.Now - _lastUpdateStatus;
@@ -180,7 +174,22 @@ namespace SourceGit.ViewModels
             }
 
             _lastUpdateStatus = DateTime.Now;
-            Status = await new Commands.QueryRepositoryStatus(_id).GetResultAsync();
+
+            // Run all filesystem I/O and process startup on a background thread to
+            // avoid blocking the UI thread on unreachable network paths (e.g. SMB).
+            var (exists, status) = await Task.Run(async () =>
+            {
+                if (!Directory.Exists(_id))
+                    return (false, (Models.RepositoryStatus)null);
+
+                return (true, await new Commands.QueryRepositoryStatus(_id).GetResultAsync());
+            });
+
+            if (token is { IsCancellationRequested: true })
+                return;
+
+            IsInvalid = !exists;
+            Status = status;
         }
 
         public void LoadMinimalInfo(string gitDir)
@@ -230,6 +239,7 @@ namespace SourceGit.ViewModels
         private int _bookmark = 0;
         private bool _isExpanded = false;
         private bool _isVisible = true;
+        private bool _isInvalid = false;
         private Models.RepositoryStatus _status = null;
         private DateTime _lastUpdateStatus = DateTime.UnixEpoch.ToLocalTime();
     }

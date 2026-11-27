@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -613,9 +614,29 @@ namespace SourceGit.ViewModels
             Save();
         }
 
-        public void AutoRemoveInvalidNode()
+        public async Task AutoRemoveInvalidNodeAsync()
         {
-            RemoveInvalidRepositoriesRecursive(RepositoryNodes);
+            var candidates = new List<RepositoryNode>();
+            CollectRepositories(RepositoryNodes, candidates);
+            if (candidates.Count == 0)
+                return;
+
+            // Re-verify on a background thread: the cached IsInvalid flag may be
+            // stale (e.g. network was down earlier but has recovered), and a fresh
+            // Directory.Exists on an unreachable path must not block the UI thread.
+            var confirmed = await Task.Run(() =>
+            {
+                var list = new List<RepositoryNode>();
+                foreach (var node in candidates)
+                {
+                    if (!Directory.Exists(node.Id))
+                        list.Add(node);
+                }
+                return list;
+            });
+
+            foreach (var node in confirmed)
+                RemoveNodeRecursive(node, RepositoryNodes);
         }
 
         public void Save()
@@ -770,25 +791,15 @@ namespace SourceGit.ViewModels
             return false;
         }
 
-        private bool RemoveInvalidRepositoriesRecursive(List<RepositoryNode> collection)
+        private void CollectRepositories(List<RepositoryNode> collection, List<RepositoryNode> outs)
         {
-            bool changed = false;
-
-            for (int i = collection.Count - 1; i >= 0; i--)
+            foreach (var node in collection)
             {
-                var node = collection[i];
-                if (node.IsInvalid)
-                {
-                    collection.RemoveAt(i);
-                    changed = true;
-                }
-                else if (!node.IsRepository)
-                {
-                    changed |= RemoveInvalidRepositoriesRecursive(node.SubNodes);
-                }
+                if (node.IsRepository)
+                    outs.Add(node);
+                else
+                    CollectRepositories(node.SubNodes, outs);
             }
-
-            return changed;
         }
 
         private static Preferences _instance = null;

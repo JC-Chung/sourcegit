@@ -112,7 +112,7 @@ namespace SourceGit.ViewModels
                 }
             }
 
-            Preferences.Instance.AutoRemoveInvalidNode();
+            await Preferences.Instance.AutoRemoveInvalidNodeAsync();
             Preferences.Instance.Save();
             Welcome.Instance.Refresh();
 
