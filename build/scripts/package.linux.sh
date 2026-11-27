@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
-set -o
-set -u
-set pipefail
+set -euo pipefail
 
 # ICU versions to support (Debian has no virtual package, must list all)
 # Format: array of version numbers
@@ -31,7 +28,7 @@ APPIMAGETOOL_URL=https://github.com/AppImage/appimagetool/releases/download/cont
 cd build
 
 if [[ ! -f "appimagetool" ]]; then
-    curl -o appimagetool -L "$APPIMAGETOOL_URL"
+    curl --fail -o appimagetool -L "$APPIMAGETOOL_URL"
     chmod +x appimagetool
 fi
 
